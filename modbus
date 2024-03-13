@@ -1,0 +1,66 @@
+#include <ModbusMaster.h>
+
+// 定義 ModbusMaster 
+ModbusMaster node;
+
+// Modbus 地址
+const int slaveId = 1;
+
+// 檢測站 Modbus 地址
+const uint16_t stationAddresses[] = {40001, 40003, 40005, 40007, 40009, 40011};
+
+// 良品和不良品的數量
+int okCount = 0;
+int ngCount = 0;
+
+void setup() {
+  // 初始化串口
+  Serial.begin(9600);
+
+  // 配置 ModbusMaster
+  node.begin(slaveId, Serial);
+}
+
+void loop() {
+  // 重置良品和不良品計數
+  okCount = 0;
+  ngCount = 0;
+
+  for (int i = 0; i < 6; i++) {
+    // 發送請求等待響應
+    uint8_t result = node.readHoldingRegisters(stationAddresses[i], 1);
+
+    // 檢查響應成功
+    if (result == node.ku8MBSuccess) {
+      // 獲取讀取到數據
+      uint16_t data = node.getResponseBuffer(0);
+      
+      // 判斷狀態累積良品與不良品
+      if (data == 1) {
+        okCount++;
+      } else if (data == 2) {
+        ngCount++;
+      }
+
+      // 印出寄存器狀態
+      Serial.print("檢測站 ");
+      Serial.print(i + 1);
+      Serial.print(" 的狀態：");
+      Serial.println(data);
+    } else {
+      Serial.print("檢測站 ");
+      Serial.print(i + 1);
+      Serial.print(" 讀取失敗，錯誤碼");
+      Serial.println(result);
+    }
+  }
+
+  // 打印良品和不良品的总数
+  Serial.print("良品數量: ");
+  Serial.println(okCount);
+  Serial.print("不良品數量: ");
+  Serial.println(ngCount);
+
+  
+  delay(2000);
+}
